@@ -1,0 +1,201 @@
+<div class="hero-section">
+  <div class="hero-content">
+    <h1>🛒 Smart Grocery Assistant</h1>
+    <p class="hero-subtitle">AI-powered grocery planning made simple</p>
+    <p class="hero-description">
+      Press the button below to generate a smart grocery list with AI suggestions
+    </p>
+    <div class="hero-actions">
+      <button
+        class="primary-button"
+        (click)="onGenerateGroceryList()"
+        [disabled]="isGeneratingList()"
+      >
+        <!-- 🎯 Angular 20 Feature: New control flow syntax @if -->
+        @if (isGeneratingList()) {
+          <div class="button-spinner"></div>
+          Generating suggestions...
+        } @else {
+          🛒 Generate Smart List
+        }
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- 🎯 Angular 20 Feature: New control flow @if instead of *ngIf -->
+@if (currentList()) {
+  <section class="current-list-section">
+    <div class="container">
+      <h2>📋 Your Shopping List</h2>
+      <div class="list-card">
+        <div class="list-header">
+          <h3>{{ currentList()!.name }}</h3>
+          <span class="item-count">{{ currentList()!.items.length }} items</span>
+        </div>
+        <div class="grocery-items">
+          <!-- 🎯 Angular 20 Feature: New control flow @for instead of *ngFor -->
+          @for (item of currentList()!.items; track item.id) {
+            <div class="grocery-item">
+              <div class="item-info">
+                <span class="item-name">{{ item.name }}</span>
+                <span class="item-category">{{ item.category }}</span>
+                @if (item.quantity) {
+                  <span class="item-quantity">{{ item.quantity }} {{ item.unit || '' }}</span>
+                }
+              </div>
+              <button class="remove-button" (click)="removeItemFromList(item.id)">❌</button>
+            </div>
+          }
+        </div>
+
+        <!-- Add Item Form -->
+        <div class="add-item-form">
+          <h4>Add Item</h4>
+          <div class="form-row">
+            <input
+              type="text"
+              placeholder="Item name"
+              [(ngModel)]="newItemName"
+              class="item-input"
+              (keyup.enter)="addManualItem()"
+            />
+            <input
+              type="number"
+              placeholder="Qty"
+              [(ngModel)]="newItemQuantity"
+              class="quantity-input"
+              (keyup.enter)="addManualItem()"
+            />
+            <select [(ngModel)]="newItemUnit" class="unit-input">
+              <option value="">Unit</option>
+              @for (unit of unitOptions; track unit.value) {
+                <option [value]="unit.value">{{ unit.label }}</option>
+              }
+            </select>
+            <button
+              class="add-button"
+              (click)="addManualItem()"
+              [disabled]="!newItemName().trim() || isAddingItem()"
+            >
+              @if (isAddingItem()) {
+                <div class="spinner-small"></div>
+              } @else {
+                ➕
+              }
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+}
+
+@if (showSuggestions() || isLoadingAISuggestions()) {
+  <section class="suggestions-section">
+    <div class="container">
+      <h2>💡 Smart Suggestions</h2>
+
+      @if (isLoadingAISuggestions()) {
+        <div class="suggestions-loading">
+          <div class="loading-spinner"></div>
+          <p>🤖 AI is analyzing your list and generating smart suggestions...</p>
+        </div>
+      } @else if (aiSuggestions().length > 0) {
+        <div class="suggestions-grid">
+          @for (suggestion of aiSuggestions(); track suggestion.item.id) {
+            <div class="suggestion-card" [class]="getPriorityClass(suggestion.priority)">
+              <div class="suggestion-header">
+                <span class="suggestion-icon">{{ getSuggestionIcon(suggestion.reason) }}</span>
+                <div class="suggestion-info">
+                  <h4>{{ suggestion.item.name }}</h4>
+                  <p class="suggestion-reason">{{ suggestion.reason | titlecase }}</p>
+                  <p class="suggestion-priority">{{ suggestion.priority | titlecase }} priority</p>
+                  @if (suggestion.item.quantity && suggestion.item.unit) {
+                    <p class="suggestion-quantity">
+                      {{ suggestion.item.quantity }} {{ suggestion.item.unit }}
+                    </p>
+                  }
+                </div>
+              </div>
+              <div class="suggestion-actions">
+                <div class="quantity-controls">
+                  <input
+                    type="number"
+                    [value]="suggestion.item.quantity || 1"
+                    (input)="updateSuggestionQuantity(suggestion, $event)"
+                    min="1"
+                    class="quantity-input-small"
+                  />
+                  <select
+                    [value]="suggestion.item.unit || ''"
+                    (change)="updateSuggestionUnit(suggestion, $event)"
+                    class="unit-select-small"
+                  >
+                    <option value="">Unit</option>
+                    @for (unit of unitOptions; track unit.value) {
+                      <option [value]="unit.value">{{ unit.label }}</option>
+                    }
+                  </select>
+                </div>
+                <button class="add-suggestion-button" (click)="addSuggestionToList(suggestion)">
+                  Add to List
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="no-suggestions">
+          <p>No suggestions available at the moment.</p>
+        </div>
+      }
+    </div>
+  </section>
+}
+
+@if (!currentList()) {
+  <section class="welcome-section">
+    <div class="container">
+      <div class="welcome-card">
+        <h2>🎉 Welcome to Smart Grocery Assistant!</h2>
+        <p>Start by generating your first smart grocery list or add items manually.</p>
+
+        <!-- Quick Start Form -->
+        <div class="quick-start-form">
+          <h3>Add Your First Item</h3>
+          <div class="form-row">
+            <input
+              type="text"
+              placeholder="What do you need to buy?"
+              [(ngModel)]="newItemName"
+              class="item-input-large"
+              (keyup.enter)="addManualItem()"
+            />
+            <button
+              class="add-button-large"
+              (click)="addManualItem()"
+              [disabled]="!newItemName().trim() || isAddingItem()"
+            >
+              @if (isAddingItem()) {
+                <div class="spinner-small"></div>
+                Adding...
+              } @else {
+                Add to List
+              }
+            </button>
+          </div>
+        </div>
+
+        <div class="welcome-tips">
+          <h3>Getting Started:</h3>
+          <ul>
+            <li>Click "Generate Smart List" to get AI-powered suggestions</li>
+            <li>Add items manually using the form above</li>
+            <li>The AI will suggest complementary items as you build your list</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+}
